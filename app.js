@@ -7,6 +7,7 @@ class MeetingManager {
         this.persons = [];
         this.meetings = [];
         this.currentMeeting = null;
+        this.theme = 'light';
     }
 
     async init() {
@@ -14,9 +15,11 @@ class MeetingManager {
             await db.init();
             await this.loadData();
             await this.ensurePersistentStorage();
+            this.initTheme();
             this.setupEventListeners();
             this.renderCalendar();
             this.renderPersonList();
+            this.updateAnalytics();
         } catch (error) {
             console.error('Error during initialization:', error);
             alert('Error starting the application. Please reload the page.');
@@ -147,6 +150,11 @@ class MeetingManager {
         document.getElementById('importFile').addEventListener('change', (e) => {
             this.importData(e.target.files[0]);
         });
+
+        const themeToggle = document.getElementById('themeToggle');
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => this.toggleTheme());
+        }
     }
 
     renderCalendar() {
@@ -200,6 +208,8 @@ class MeetingManager {
             const dayElement = this.createDayElement(day, year, month + 1, true);
             calendarDays.appendChild(dayElement);
         }
+
+        this.updateAnalytics();
     }
 
     createDayElement(day, year, month, isOtherMonth) {
@@ -355,48 +365,153 @@ class MeetingManager {
             const aDays = this.getDaysSince(aLastMeeting);
             const bDays = this.getDaysSince(bLastMeeting);
             
-            // People without meetings (null) first
             if (aDays === null && bDays === null) return 0;
-            if (aDays === null) return -1;
-            if (bDays === null) return 1;
-            
-            // Sort by days descending (longest period first)
+            if (aDays === null) return 1;   // push "No meeting yet" to bottom
+            if (bDays === null) return -1;
             return bDays - aDays;
         });
 
+        // Group by days label to save space
+        const groups = [];
+        const groupMap = new Map();
+
         sortedPersons.forEach(person => {
-            const li = document.createElement('li');
-            li.className = 'person-item';
-            
             const personMeetings = this.meetings.filter(m => m.personId === person.id);
             const lastMeeting = this.getLastMeeting(personMeetings);
-            const nextReminder = this.getNextReminder(lastMeeting);
             const daysSinceLastMeeting = this.getDaysSince(lastMeeting);
+            const labelInfo = this.getDaysLabel(daysSinceLastMeeting, lastMeeting);
 
-            li.innerHTML = `
-                <div class="person-name">${person.name}</div>
-                <div class="person-stats">
-                    <span>☕ ${personMeetings.filter(m => m.type === 'coffee').length}</span>
-                    <span>🍽️ ${personMeetings.filter(m => m.type === 'lunch').length}</span>
-                </div>
-                ${lastMeeting ? `<div style="font-size: 0.8em; margin-top: 5px; color: #64748b;">Last meeting: ${this.formatDate(lastMeeting.date)}</div>` : ''}
-                ${daysSinceLastMeeting !== null ? (daysSinceLastMeeting === 0 ? `<div style="font-size: 0.8em; color: ${this.getDaysColor(daysSinceLastMeeting)};">🕒 Today</div>` : daysSinceLastMeeting > 0 ? `<div style="font-size: 0.8em; color: ${this.getDaysColor(daysSinceLastMeeting)};">🕒 ${daysSinceLastMeeting} ${daysSinceLastMeeting === 1 ? 'day' : 'days'} ago</div>` : `<div style="font-size: 0.8em; color: ${this.getDaysColor(daysSinceLastMeeting)};">📅 in ${Math.abs(daysSinceLastMeeting)} ${Math.abs(daysSinceLastMeeting) === 1 ? 'day' : 'days'}</div>`) : '<div style="font-size: 0.8em; color: #94a3b8;">No meeting yet</div>'}
-                ${nextReminder ? `<div style="font-size: 0.8em; color: #ea580c;">⚠️ Next meeting due</div>` : ''}
-                <div class="person-actions">
-                    <button class="btn btn-primary btn-small" onclick="app.openMeetingModal(null, null, ${person.id})">+ Meeting</button>
-                    <button class="btn btn-secondary btn-small" onclick="app.openPersonModal(${person.id})">✏️</button>
-                    <button class="btn btn-danger btn-small" onclick="app.deletePersonConfirm(${person.id})">🗑️</button>
-                </div>
-            `;
+            const key = labelInfo.label;
+            if (!groupMap.has(key)) {
+                const group = { label: labelInfo.label, color: labelInfo.color, persons: [] };
+                groupMap.set(key, group);
+                groups.push(group);
+            }
+            groupMap.get(key).persons.push({ person, personMeetings, lastMeeting, daysSinceLastMeeting });
+        });
 
-            li.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('btn')) {
-                    this.selectPerson(person.id);
-                }
+        groups.forEach(group => {
+            const groupEl = document.createElement('div');
+            groupEl.className = 'person-group';
+
+            const header = document.createElement('div');
+            header.className = 'person-group-header';
+            header.innerHTML = `<span style="color:${group.color};">${group.label}</span>`;
+            groupEl.appendChild(header);
+
+            const wrap = document.createElement('div');
+            wrap.className = 'person-chip-wrap';
+
+            group.persons.forEach(entry => {
+                const { person, personMeetings, lastMeeting, daysSinceLastMeeting } = entry;
+                const chip = document.createElement('div');
+                chip.className = 'person-chip';
+
+                const counts = `☕ ${personMeetings.filter(m => m.type === 'coffee').length} · 🍽️ ${personMeetings.filter(m => m.type === 'lunch').length}`;
+                const when = lastMeeting ? `${this.formatDate(lastMeeting.date)}` : '—';
+
+                chip.innerHTML = `
+                    <div class="person-chip-header">
+                        <div class="person-chip-name">${person.name}</div>
+                        <div class="person-chip-meta person-chip-counts">${counts}</div>
+                    </div>
+                    <div class="person-chip-row">
+                        <div class="person-chip-meta person-chip-last">${when}</div>
+                        <div class="person-chip-meta person-chip-days" style="color:${daysSinceLastMeeting === null ? 'var(--text-secondary)' : this.getDaysColor(daysSinceLastMeeting)};">${this.getDaysLabelText(daysSinceLastMeeting)}</div>
+                    </div>
+                    <div class="person-chip-actions">
+                        <button class="btn btn-primary btn-small" onclick="app.openMeetingModal(null, null, ${person.id})">+ Meeting</button>
+                        <button class="btn btn-secondary btn-small" onclick="app.openPersonModal(${person.id})">✏️</button>
+                        <button class="btn btn-danger btn-small" onclick="app.deletePersonConfirm(${person.id})">🗑️</button>
+                    </div>
+                `;
+
+                chip.addEventListener('click', (e) => {
+                    if (!e.target.classList.contains('btn')) {
+                        this.selectPerson(person.id);
+                    }
+                });
+
+                wrap.appendChild(chip);
             });
 
-            personList.appendChild(li);
+            groupEl.appendChild(wrap);
+            personList.appendChild(groupEl);
         });
+
+        this.updateAnalytics();
+    }
+
+    getDaysLabel(daysSince, lastMeeting) {
+        if (daysSince === null) {
+            return { label: 'No meeting yet', color: '#94a3b8' };
+        }
+        if (daysSince === 0) {
+            return { label: 'Today', color: this.getDaysColor(daysSince) };
+        }
+        if (daysSince < 0) {
+            const abs = Math.abs(daysSince);
+            return { label: `In ${abs} ${abs === 1 ? 'day' : 'days'}`, color: this.getDaysColor(daysSince) };
+        }
+        return { label: `${daysSince} ${daysSince === 1 ? 'day' : 'days'} ago`, color: this.getDaysColor(daysSince) };
+    }
+
+    getDaysLabelText(daysSince) {
+        if (daysSince === null) return 'No meeting yet';
+        if (daysSince === 0) return 'Today';
+        if (daysSince < 0) {
+            const abs = Math.abs(daysSince);
+            return `In ${abs} ${abs === 1 ? 'day' : 'days'}`;
+        }
+        return `${daysSince} ${daysSince === 1 ? 'day' : 'days'} ago`;
+    }
+
+    updateAnalytics() {
+        const totalPeople = this.persons.length;
+        const totalMeetings = this.meetings.length;
+        const coffee = this.meetings.filter(m => m.type === 'coffee').length;
+        const lunch = this.meetings.filter(m => m.type === 'lunch').length;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const upcoming = this.meetings.filter(m => {
+            const d = new Date(m.date);
+            d.setHours(0, 0, 0, 0);
+            return d >= today;
+        }).length;
+        const overdue = this.meetings.filter(m => this.isOverdue(m)).length;
+
+        const set = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        };
+        set('statPeople', totalPeople);
+        set('statMeetings', totalMeetings);
+        set('statCoffee', coffee);
+        set('statLunch', lunch);
+        set('statUpcoming', upcoming);
+        set('statOverdue', overdue);
+    }
+
+    initTheme() {
+        const saved = localStorage.getItem('mm-theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        this.theme = saved || (prefersDark ? 'dark' : 'light');
+        this.applyTheme();
+    }
+
+    toggleTheme() {
+        this.theme = this.theme === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('mm-theme', this.theme);
+        this.applyTheme();
+    }
+
+    applyTheme() {
+        if (this.theme === 'dark') {
+            document.body.classList.add('dark');
+        } else {
+            document.body.classList.remove('dark');
+        }
     }
 
     filterPersons(searchTerm) {
@@ -709,6 +824,7 @@ class MeetingManager {
             await this.loadData();
             this.renderPersonList();
             this.renderCalendar();
+            this.updateAnalytics();
             this.closeAllModals();
         } catch (error) {
             console.error('Error saving:', error);
@@ -740,6 +856,7 @@ class MeetingManager {
             if (this.currentView === 'list') {
                 this.renderListView();
             }
+            this.updateAnalytics();
             this.closeAllModals();
         } catch (error) {
             console.error('Error saving:', error);
@@ -758,6 +875,7 @@ class MeetingManager {
                 if (this.currentView === 'list') {
                     this.renderListView();
                 }
+                this.updateAnalytics();
             } catch (error) {
                 console.error('Error deleting:', error);
                 alert('Error deleting person');
@@ -775,6 +893,7 @@ class MeetingManager {
                 if (this.currentView === 'list') {
                     this.renderListView();
                 }
+                this.updateAnalytics();
                 this.closeAllModals();
             } catch (error) {
                 console.error('Error deleting:', error);
@@ -881,6 +1000,7 @@ class MeetingManager {
             if (this.currentView === 'list') {
                 this.renderListView();
             }
+            this.updateAnalytics();
 
             alert('✅ Data imported successfully!');
             

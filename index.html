@@ -15,8 +15,36 @@
                 <button id="exportBtn" class="btn btn-secondary" title="Export data as JSON">📥 Export</button>
                 <button id="importBtn" class="btn btn-secondary" title="Import data from JSON">📤 Import</button>
                 <input type="file" id="importFile" accept=".json" style="display: none;">
+                <button id="themeToggle" class="btn btn-secondary" title="Toggle light/dark mode">🌓 Theme</button>
             </div>
         </header>
+
+        <section class="analytics" aria-label="Analytics summary">
+            <div class="stat-card">
+                <div class="stat-label">People</div>
+                <div class="stat-value" id="statPeople">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Meetings</div>
+                <div class="stat-value" id="statMeetings">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Coffee</div>
+                <div class="stat-value" id="statCoffee">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Lunch</div>
+                <div class="stat-value" id="statLunch">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Upcoming</div>
+                <div class="stat-value" id="statUpcoming">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Overdue</div>
+                <div class="stat-value" id="statOverdue">0</div>
+            </div>
+        </section>
 
         <div class="main-content">
             <!-- Sidebar for people -->
