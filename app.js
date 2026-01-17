@@ -13,12 +13,36 @@ class MeetingManager {
         try {
             await db.init();
             await this.loadData();
+            await this.ensurePersistentStorage();
             this.setupEventListeners();
             this.renderCalendar();
             this.renderPersonList();
         } catch (error) {
             console.error('Error during initialization:', error);
             alert('Error starting the application. Please reload the page.');
+        }
+    }
+
+    async ensurePersistentStorage() {
+        try {
+            const statusEl = document.getElementById('storageStatus');
+            if (!navigator.storage || !navigator.storage.persist) {
+                if (statusEl) statusEl.textContent = 'Storage: unknown';
+                return;
+            }
+
+            const alreadyPersisted = await navigator.storage.persisted();
+            if (alreadyPersisted) {
+                if (statusEl) statusEl.textContent = 'Storage: persistent';
+                return;
+            }
+
+            const granted = await navigator.storage.persist();
+            if (statusEl) statusEl.textContent = granted ? 'Storage: persistent' : 'Storage: not persistent';
+        } catch (e) {
+            const statusEl = document.getElementById('storageStatus');
+            if (statusEl) statusEl.textContent = 'Storage: error';
+            console.warn('Persistent storage request failed:', e);
         }
     }
 
