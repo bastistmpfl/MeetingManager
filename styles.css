@@ -292,7 +292,7 @@ header h1 {
 }
 
 .day-meetings {
-    font-size: 0.7em;
+    font-size: 1.5em;
     display: flex;
     flex-wrap: wrap;
     gap: 2px;
@@ -304,9 +304,9 @@ header h1 {
 
 .meeting-badge {
     display: inline-block;
-    padding: 1px 4px;
+    padding: 4px 8px;
     border-radius: 3px;
-    font-size: 0.75em;
+    font-size: 1em;
     line-height: 1.2;
 }
 
