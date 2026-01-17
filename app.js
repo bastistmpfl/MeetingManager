@@ -409,9 +409,13 @@ class MeetingManager {
 
                 const counts = `☕ ${personMeetings.filter(m => m.type === 'coffee').length} · 🍽️ ${personMeetings.filter(m => m.type === 'lunch').length}`;
                 const when = lastMeeting ? `${this.formatDate(lastMeeting.date)}` : '—';
+                const urgencyColor = this.getUrgencyColor(daysSinceLastMeeting);
+                const avatarColor = this.getAvatarColor(person.id);
+                const initials = this.getInitials(person.name);
 
                 chip.innerHTML = `
                     <div class="person-chip-header">
+                        <div class="person-chip-avatar" style="background-color: ${avatarColor};">${initials}</div>
                         <div class="person-chip-name">${person.name}</div>
                         <div class="person-chip-meta person-chip-counts">${counts}</div>
                     </div>
@@ -425,6 +429,7 @@ class MeetingManager {
                         <button class="btn btn-danger btn-small" onclick="app.deletePersonConfirm(${person.id})">🗑️</button>
                     </div>
                 `;
+                chip.style.borderLeftColor = urgencyColor;
 
                 chip.addEventListener('click', (e) => {
                     if (!e.target.classList.contains('btn')) {
@@ -906,6 +911,26 @@ class MeetingManager {
     getPersonName(personId) {
         const person = this.persons.find(p => p.id === personId);
         return person ? person.name : 'Unknown';
+    }
+
+    getInitials(name) {
+        const parts = name.trim().split(/\s+/);
+        if (parts.length >= 2) {
+            return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        }
+        return name.substring(0, 2).toUpperCase();
+    }
+
+    getAvatarColor(personId) {
+        const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#6366f1', '#f97316'];
+        return colors[personId % colors.length];
+    }
+
+    getUrgencyColor(daysSince) {
+        if (daysSince === null) return '#cbd5e1';
+        if (daysSince > 90) return '#dc2626';
+        if (daysSince > 30) return '#ea580c';
+        return '#16a34a';
     }
 
     formatDate(dateStr) {

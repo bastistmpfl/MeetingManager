@@ -278,6 +278,7 @@ header h1 {
 
 .person-chip {
     border: 1px solid var(--border-color);
+    border-left: 4px solid #16a34a;
     border-radius: 8px;
     padding: 8px;
     background: var(--bg-secondary);
@@ -295,8 +296,22 @@ header h1 {
 .person-chip-header,
 .person-chip-row {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
+    gap: 8px;
+}
+
+.person-chip-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.65em;
+    color: white;
+    flex-shrink: 0;
 }
 
 .person-chip-counts {
@@ -315,6 +330,7 @@ header h1 {
 .person-chip-name {
     font-weight: 600;
     font-size: 0.95em;
+    flex-grow: 1;
 }
 
 .person-chip-meta {
