@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeetingManager - Coffee & Lunch Meetings</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>☕ MeetingManager</h1>
+            <p class="subtitle">Manage your coffee and lunch meetings</p>
+            <div class="header-actions">
+                <button id="exportBtn" class="btn btn-secondary" title="Export data as JSON">📥 Export</button>
+                <button id="importBtn" class="btn btn-secondary" title="Import data from JSON">📤 Import</button>
+                <input type="file" id="importFile" accept=".json" style="display: none;">
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Sidebar for people -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h2>People</h2>
+                    <button id="addPersonBtn" class="btn btn-primary">+ Person</button>
+                </div>
+                <div class="search-box">
+                    <input type="text" id="personSearch" placeholder="Search person...">
+                </div>
+                <ul id="personList" class="person-list"></ul>
+            </aside>
+
+            <!-- Main area with calendar -->
+            <main class="calendar-section">
+                <div class="calendar-header">
+                    <button id="prevMonth" class="nav-btn">‹</button>
+                    <h2 id="currentMonth"></h2>
+                    <button id="nextMonth" class="nav-btn">›</button>
+                    <button id="todayBtn" class="btn btn-secondary">Today</button>
+                </div>
+                
+                <div class="view-toggle">
+                    <button id="monthViewBtn" class="view-btn active">Month</button>
+                    <button id="listViewBtn" class="view-btn">List</button>
+                </div>
+
+                <div id="calendarView" class="calendar-grid">
+                    <div class="calendar-weekdays">
+                        <div>Mon</div>
+                        <div>Tue</div>
+                        <div>Wed</div>
+                        <div>Thu</div>
+                        <div>Fri</div>
+                        <div>Sat</div>
+                        <div>Sun</div>
+                    </div>
+                    <div id="calendarDays" class="calendar-days"></div>
+                </div>
+
+                <div id="listView" class="list-view" style="display: none;">
+                    <div class="list-filters">
+                        <select id="filterType">
+                            <option value="all">All meetings</option>
+                            <option value="coffee">Coffee</option>
+                            <option value="lunch">Lunch</option>
+                        </select>
+                        <select id="filterStatus">
+                            <option value="all">All statuses</option>
+                            <option value="past">Past</option>
+                            <option value="upcoming">Upcoming</option>
+                            <option value="overdue">Overdue</option>
+                        </select>
+                    </div>
+                    <div id="meetingList" class="meeting-list"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal for add/edit person -->
+    <div id="personModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="personModalTitle">Add Person</h3>
+                <span class="close">&times;</span>
+            </div>
+            <form id="personForm">
+                <input type="hidden" id="personId">
+                <div class="form-group">
+                    <label for="personName">Name*</label>
+                    <input type="text" id="personName" required>
+                </div>
+                <div class="form-group">
+                    <label for="personEmail">Email</label>
+                    <input type="email" id="personEmail">
+                </div>
+                <div class="form-group">
+                    <label for="personNotes">Notes</label>
+                    <textarea id="personNotes" rows="3"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary cancel-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for add/edit meeting -->
+    <div id="meetingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="meetingModalTitle">Add Meeting</h3>
+                <span class="close">&times;</span>
+            </div>
+            <form id="meetingForm">
+                <input type="hidden" id="meetingId">
+                <div class="form-group">
+                    <label for="meetingPerson">Person*</label>
+                    <select id="meetingPerson" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="meetingType">Type*</label>
+                    <select id="meetingType" required>
+                        <option value="coffee">☕ Coffee</option>
+                        <option value="lunch">🍽️ Lunch</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="meetingDate">Date*</label>
+                    <input type="date" id="meetingDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="meetingTime">Time</label>
+                    <input type="time" id="meetingTime">
+                </div>
+                <div class="form-group">
+                    <label for="meetingNotes">Notes</label>
+                    <textarea id="meetingNotes" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="reminderDays">Reminder for next meeting (days)</label>
+                    <input type="number" id="reminderDays" min="1" placeholder="e.g. 30 days">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary cancel-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for meeting details -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Meeting Details</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div id="detailContent" class="detail-content"></div>
+            <div class="form-actions">
+                <button id="editMeetingBtn" class="btn btn-primary">Edit</button>
+                <button id="deleteMeetingBtn" class="btn btn-danger">Delete</button>
+                <button class="btn btn-secondary cancel-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="database.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
