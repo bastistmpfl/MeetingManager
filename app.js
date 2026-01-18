@@ -552,8 +552,8 @@ class MeetingManager {
         document.getElementById('monthViewBtn').classList.toggle('active', view === 'month');
         document.getElementById('listViewBtn').classList.toggle('active', view === 'list');
         
-        document.getElementById('calendarView').style.display = view === 'month' ? 'block' : 'none';
-        document.getElementById('listView').style.display = view === 'list' ? 'block' : 'none';
+        document.getElementById('calendarView').classList.toggle('hidden', view !== 'month');
+        document.getElementById('listView').classList.toggle('hidden', view !== 'list');
         
         if (view === 'list') {
             this.renderListView();
